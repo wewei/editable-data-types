@@ -1,9 +1,12 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 module Data.Rebasable where
 import Data.List (mapAccumL)
+import Data.Editable (Editable (apply))
+import Control.Monad
 
 class WeakRebasable o where
     weakRebase  :: o -> o -> ([o], [o])
@@ -24,6 +27,10 @@ class Rebasable o where
 
     rebaseR :: o -> o -> o
     rebaseR = flip rebaseL
+
+instance Rebasable o => WeakRebasable o where
+    weakRebase :: Rebasable o => o -> o -> ([o], [o])
+    weakRebase o1 o2 = let (o3, o4) = rebase o1 o2 in ([o3], [o4])
 
 {-
    +----------------+----------------+
@@ -62,3 +69,10 @@ instance WeakRebasable o => Rebasable [o] where
         -- == y <> xs1 <> ys2 <> xs4
         -- == y <> ys <> xs3 <> xs4
         in (xs3 <> xs4, ys3 <> ys4)
+
+checkCP1 :: (Eq d, WeakRebasable o, Editable d o) => o -> o -> d -> (Bool, (Maybe d, Maybe d))
+checkCP1 o1 o2 d = let
+    (os1, os2) = weakRebase o1 o2
+    d1 = foldM (flip apply) d (o1:os2)
+    d2 = foldM (flip apply) d (o2:os1)
+    in (d1 == d2, (d1, d2))

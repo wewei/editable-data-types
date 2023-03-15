@@ -3,7 +3,7 @@ module Main where
 import Data.ReplaceSegment (splice, ReplaceSegment (ReplaceSegment))
 import Test.Hspec ( hspec, describe, it, shouldBe )
 import Data.Editable ( Editable(apply) )
-import Data.Rebasable ( Rebasable, checkCP1)
+import Data.Rebasable ( Rebasable (rebaseL), checkCP1)
 import Control.Monad (forM_, replicateM, replicateM_, when, unless)
 import Data.Invertable (Invertable(invert))
 import System.Random ( randomRIO )
@@ -34,7 +34,17 @@ randRS str = do
     tar     <- randStr (0, 5)
     return $ ReplaceSegment i src tar
 
-    
+fuzzCP2 :: (Eq d, Eq o, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO ()
+fuzzCP2 genDoc genOp = do
+    d <- genDoc
+    o1 <- genOp d
+    o2 <- genOp d
+    o3 <- genOp d
+    let t1 = rebaseL [o3] [o1, rebaseL o2 o1]
+    let t2 = rebaseL [o3] [o2, rebaseL o1 o2]
+    unless (t1 == t2) $ do
+        print (o1, o2, o3, t1, t2)
+    t1 `shouldBe` t2
 
 
 main :: IO ()
@@ -74,3 +84,5 @@ main = hspec $ do
             fst (checkCP1 (ReplaceSegment 0 "k" "js") (ReplaceSegment 0 "k" "tdvgb") "k") `shouldBe` True
         it "should pass the CP1 fuzz test" $ do
             replicateM_ 100 $ fuzzCP1 (randStr (0, 20)) randRS
+        -- it "should pass the CP2 fuzz test" $ do
+        --     replicateM_ 100 $ fuzzCP2 (randStr (0, 20)) randRS

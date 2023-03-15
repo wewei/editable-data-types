@@ -9,7 +9,7 @@ data Eq a => ReplaceSegment a = ReplaceSegment
     { index :: Int
     , source :: [a]
     , target :: [a]
-    }
+    } deriving Eq
 
 instance (Show a, Eq a) => Show (ReplaceSegment a) where
   show :: Show a => ReplaceSegment a -> String

@@ -6,7 +6,7 @@
 module Data.Rebasable where
 import Data.List (mapAccumL)
 import Data.Editable (Editable (apply))
-import Control.Monad
+import Control.Monad ( foldM )
 
 class WeakRebasable o where
     weakRebase  :: o -> o -> ([o], [o])
@@ -70,9 +70,9 @@ instance WeakRebasable o => Rebasable [o] where
         -- == y <> ys <> xs3 <> xs4
         in (xs3 <> xs4, ys3 <> ys4)
 
-checkCP1 :: (Eq d, WeakRebasable o, Editable d o) => o -> o -> d -> (Bool, (Maybe d, Maybe d))
+checkCP1 :: (Eq d, WeakRebasable o, Editable d o) => o -> o -> d -> (Bool, (Maybe d, Maybe d, [o], [o]))
 checkCP1 o1 o2 d = let
     (os1, os2) = weakRebase o1 o2
     d1 = foldM (flip apply) d (o1:os2)
     d2 = foldM (flip apply) d (o2:os1)
-    in (d1 == d2, (d1, d2))
+    in (d1 == d2, (d1, d2, os1, os2))

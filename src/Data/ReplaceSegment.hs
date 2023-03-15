@@ -11,10 +11,14 @@ data Eq a => ReplaceSegment a = ReplaceSegment
     , target :: [a]
     }
 
+instance (Show a, Eq a) => Show (ReplaceSegment a) where
+  show :: Show a => ReplaceSegment a -> String
+  show (ReplaceSegment i s t) = "ReplaceSegment " <> show i <> " " <> show s <> " " <> show t
+
 instance Eq a => Editable [a] (ReplaceSegment a) where
     apply :: Eq a => ReplaceSegment a -> [a] -> Maybe [a]
     apply (ReplaceSegment i s t) xs
-        | i >= 0 && i < length xs = let
+        | i >= 0 && i <= length xs = let
             (prefix, ys) = splitAt i xs
             (ws, suffix) = splitAt (length s) ys
             in if ws == s
@@ -50,6 +54,6 @@ instance Ord a => Rebasable (ReplaceSegment a) where
                     else if i1 + ls1 > i2 + ls2
                         then ReplaceSegment (i2 + lt2) (drop (i2 + ls2 - i1) s1) t1
                         else ReplaceSegment (i2 + lt2) [] t1
-            else if ls1 < ls2 || t1 <= t2
+            else if ls1 < ls2 || ls1 == ls2 && t1 <= t2
                 then ReplaceSegment i1 [] t1
                 else ReplaceSegment (i2 + lt2) (drop ls2 s1) t1

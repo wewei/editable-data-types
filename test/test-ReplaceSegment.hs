@@ -1,24 +1,17 @@
 module Main where
 
-import Data.ReplaceSegment (splice, ReplaceSegment (ReplaceSegment))
+import Editable.List.ReplaceSegment (splice, ReplaceSegment (ReplaceSegment))
 import Test.Hspec ( hspec, describe, it, shouldBe )
-import Data.Editable ( Editable(apply) )
-import Data.Rebasable ( Rebasable (rebaseL), checkCP1)
+import Editable.Core
+    ( Editable(apply),
+      Rebasable((+>)),
+      Invertable(invert) )
 import Control.Monad (forM_, replicateM, replicateM_, when, unless)
-import Data.Invertable (Invertable(invert))
 import System.Random ( randomRIO )
 import Text.Printf ( printf )
-
-fuzzCP1 :: (Eq d, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO ()
-fuzzCP1 genDoc genOp = do
-    d <- genDoc
-    o1 <- genOp d
-    o2 <- genOp d
-    let (result, ds) = checkCP1 o1 o2 d
-    unless result $ do
-        print (d, o1, o2, ds)
-        printf "fst (checkCP1 (%s) (%s) %s) `shouldBe` True" (show o1) (show o2) (show d)
-    result `shouldBe` True
+import Editable.Properties (testCP1)
+import Control.Monad.Writer (runWriter)
+import Fuzz ( fuzzCP1, fuzzCP2 )
 
 randStr :: (Int, Int) -> IO [Char]
 randStr range = do
@@ -33,18 +26,6 @@ randRS str = do
     let src = drop i . take l $ str
     tar     <- randStr (0, 5)
     return $ ReplaceSegment i src tar
-
-fuzzCP2 :: (Eq d, Eq o, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO ()
-fuzzCP2 genDoc genOp = do
-    d <- genDoc
-    o1 <- genOp d
-    o2 <- genOp d
-    o3 <- genOp d
-    let t1 = rebaseL [o3] [o1, rebaseL o2 o1]
-    let t2 = rebaseL [o3] [o2, rebaseL o1 o2]
-    unless (t1 == t2) $ do
-        print (o1, o2, o3, t1, t2)
-    t1 `shouldBe` t2
 
 
 main :: IO ()
@@ -70,7 +51,8 @@ main = hspec $ do
                 , (ReplaceSegment 1 "bcd" "xy", ReplaceSegment 5 "f" "z")
                 , (ReplaceSegment 1 "bcd" "xy", ReplaceSegment 2 "cde" "z")
                 ] $ \(o1, o2) -> do
-                    let (result, ds) = checkCP1 o1 o2 "abcdefg"
+                    let (result, log) = runWriter $ testCP1 o1 o2 "abcdefg"
+                    putStrLn . log $ ""
                     result `shouldBe` True
             forM_
                 [ (ReplaceSegment 1 "bcd" "", ReplaceSegment 2 "c" "")
@@ -78,11 +60,18 @@ main = hspec $ do
                 , (ReplaceSegment 1 "bcd" "xy", ReplaceSegment 5 "f" "z")
                 , (ReplaceSegment 1 "bcd" "xy", ReplaceSegment 2 "cde" "z")
                 ] $ \(o1, o2) -> do
-                    let (result, ds) = checkCP1 [o1, invert o1] [o2] "abcdefg"
+                    let (result, log) = runWriter $ testCP1 [o1, invert o1] [o2] "abcdefg"
+                    putStrLn . log $ ""
                     result `shouldBe` True
-            fst (checkCP1 (ReplaceSegment 0 "vq" "psj") (ReplaceSegment 0 "vqd" "o") "vqdu") `shouldBe` True
-            fst (checkCP1 (ReplaceSegment 0 "k" "js") (ReplaceSegment 0 "k" "tdvgb") "k") `shouldBe` True
+            let (result, log) = runWriter $ testCP1 (ReplaceSegment 0 "vq" "psj") (ReplaceSegment 0 "vqd" "o") "vqdu"
+            putStrLn . log $ ""
+            result `shouldBe` True
+
+            let (result, log) = runWriter $ testCP1 (ReplaceSegment 0 "k" "js") (ReplaceSegment 0 "k" "tdvgb") "k"
+            putStrLn . log $ ""
+            result `shouldBe` True
+
         it "should pass the CP1 fuzz test" $ do
             replicateM_ 100 $ fuzzCP1 (randStr (0, 20)) randRS
         -- it "should pass the CP2 fuzz test" $ do
-        --     replicateM_ 100 $ fuzzCP2 (randStr (0, 20)) randRS
+        --     replicateM_ 10 $ fuzzCP2 (randStr (0, 20)) randRS

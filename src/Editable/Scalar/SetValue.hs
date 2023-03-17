@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Data.SetValue where
+module Editable.Scalar.SetValue where
 import Data.Editable (Editable (apply))
 
 newtype SetValue a = SetValue a

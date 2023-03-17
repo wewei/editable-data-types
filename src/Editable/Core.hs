@@ -1,12 +1,43 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 
-module Data.Rebasable where
-import Data.List (mapAccumL)
-import Data.Editable (Editable (apply))
-import Control.Monad ( foldM )
+module Editable.Core where
+
+class Editable d o where
+    apply :: o -> d -> Maybe d
+    apply o d = Just d ~ o
+
+    (~) :: Maybe d -> o -> Maybe d
+    d ~ o = d >>= apply o
+
+instance Semigroup m => Editable m m where
+    apply :: Semigroup m => m -> m -> Maybe m
+    apply x y = Just (x <> y)
+
+instance (Editable d1 o1, Editable d2 o2) => Editable (d1, d2) (Either o1 o2) where
+    apply :: (Editable d1 o1, Editable d2 o2) => Either o1 o2 -> (d1, d2) -> Maybe (d1, d2)
+    apply (Left o) (d1, d2)  = (, d2) <$> apply o d1
+    apply (Right o) (d1, d2) = (d1, ) <$> apply o d2
+
+instance (Editable d o) => Editable d [o] where
+    (~) :: Editable d o => Maybe d -> [o] -> Maybe d
+    (~) = foldl (~)
+
+class Invertable o where
+    invert :: o -> o
+
+instance (Invertable o) => Invertable [o] where
+    invert :: Invertable o => [o] -> [o]
+    invert = reverse . map invert
+
+instance (Invertable o1, Invertable o2) => Invertable (Either o1 o2) where
+    invert :: (Invertable o1, Invertable o2) => Either o1 o2 -> Either o1 o2
+    invert (Left o)  = Left (invert o)
+    invert (Right o) = Right (invert o)
 
 class WeakRebasable o where
     weakRebase  :: o -> o -> ([o], [o])
@@ -20,13 +51,13 @@ class WeakRebasable o where
 
 class Rebasable o where
     rebase  :: o -> o -> (o, o)
-    rebase o1 o2 = (rebaseL o1 o2, rebaseL o2 o1)
+    rebase o1 o2 = (o1 +> o2, o2 +> o1)
 
-    rebaseL :: o -> o -> o
-    rebaseL = (fst .) . rebase
+    (+>) :: o -> o -> o
+    (+>) = (fst .) . rebase
 
-    rebaseR :: o -> o -> o
-    rebaseR = flip rebaseL
+    (<+) :: o -> o -> o
+    (<+) = flip (+>)
 
 instance Rebasable o => WeakRebasable o where
     weakRebase :: Rebasable o => o -> o -> ([o], [o])
@@ -69,10 +100,3 @@ instance WeakRebasable o => Rebasable [o] where
         -- == y <> xs1 <> ys2 <> xs4
         -- == y <> ys <> xs3 <> xs4
         in (xs3 <> xs4, ys3 <> ys4)
-
-checkCP1 :: (Eq d, WeakRebasable o, Editable d o) => o -> o -> d -> (Bool, (Maybe d, Maybe d, [o], [o]))
-checkCP1 o1 o2 d = let
-    (os1, os2) = weakRebase o1 o2
-    d1 = foldM (flip apply) d (o1:os2)
-    d2 = foldM (flip apply) d (o2:os1)
-    in (d1 == d2, (d1, d2, os1, os2))

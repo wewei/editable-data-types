@@ -1,9 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
-module Data.ReplaceSegment where
-import Data.Editable (Editable (apply))
-import Data.Invertable (Invertable (invert))
-import Data.Rebasable (Rebasable (rebaseL))
+module Editable.List.ReplaceSegment where
+import Editable.Core (Editable (apply), Invertable (invert), Rebasable ((+>)))
 
 data Eq a => ReplaceSegment a = ReplaceSegment
     { index :: Int
@@ -38,8 +36,8 @@ instance Eq a => Invertable (ReplaceSegment a) where
     invert (ReplaceSegment i s t) = ReplaceSegment i t s
 
 instance Ord a => Rebasable (ReplaceSegment a) where
-    rebaseL :: Ord a => ReplaceSegment a -> ReplaceSegment a -> ReplaceSegment a
-    rebaseL (ReplaceSegment i1 s1 t1) (ReplaceSegment i2 s2 t2) = let
+    (+>) :: Ord a => ReplaceSegment a -> ReplaceSegment a -> ReplaceSegment a
+    (ReplaceSegment i1 s1 t1) +> (ReplaceSegment i2 s2 t2) = let
         [ls1, lt1, ls2, lt2] = map length [s1, t1, s2, t2]
         in
             if i1 < i2

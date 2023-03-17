@@ -2,6 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
 
+module Editable.ReplaceValue where
+
 import Data.Editable ( Editable(..) )
 import Data.Invertable ( Invertable(..) )
 

@@ -51,6 +51,7 @@ instance (Eq d, Show d, Show o, Rebasable o, Editable d o) => Debuggable (CP1Cas
         printf " -> %s\n" $ show m2
         printf "  ~ %s\n" $ show o1'
         printf " -> %s\n" $ show d2
+        printf "\n"
         return (d1 == d2)
 
 fuzzCP1 :: (Eq d, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO Bool

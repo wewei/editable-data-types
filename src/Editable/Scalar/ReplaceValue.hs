@@ -2,10 +2,8 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
 
-module Editable.ReplaceValue where
-
-import Data.Editable ( Editable(..) )
-import Data.Invertable ( Invertable(..) )
+module Editable.Scalar.ReplaceValue where
+import Editable.Core (Editable (apply), Invertable (invert))
 
 data Eq a => ReplaceValue a = ReplaceValue
     { from :: a

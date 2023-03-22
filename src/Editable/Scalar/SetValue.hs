@@ -3,7 +3,7 @@
 {-# LANGUAGE InstanceSigs #-}
 
 module Editable.Scalar.SetValue where
-import Data.Editable (Editable (apply))
+import Editable.Core (Editable (apply))
 
 newtype SetValue a = SetValue a
 

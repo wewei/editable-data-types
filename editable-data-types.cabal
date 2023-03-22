@@ -59,4 +59,3 @@ test-suite test-ReplaceSegment
                       , Editable.Core
                       , Editable.Properties
                       , Editable.List.ReplaceSegment
-                      , Fuzz

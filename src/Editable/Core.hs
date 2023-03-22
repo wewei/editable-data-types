@@ -6,6 +6,8 @@
 {-# LANGUAGE MonoLocalBinds #-}
 
 module Editable.Core where
+import Data.Functor.Classes (Eq1 (liftEq), Show1 (liftShowsPrec))
+import Control.Monad.Identity (Identity)
 
 class Editable d o where
     apply :: o -> d -> Maybe d
@@ -99,4 +101,24 @@ instance WeakRebasable o => Rebasable [o] where
         -- == y <> xs1 <> xs2 <> ys4
         -- == y <> xs1 <> ys2 <> xs4
         -- == y <> ys <> xs3 <> xs4
-        in (xs3 <> xs4, ys3 <> ys4)
+        in (xs3 ++ xs4, ys3 ++ ys4)
+
+newtype Rebase o = Rebase o;
+
+instance Rebasable o => Rebasable (Rebase o) where
+    (+>) :: Rebasable o => Rebase o -> Rebase o -> Rebase o
+    (Rebase o1) +> (Rebase o2) = Rebase (o1 +> o2)
+
+instance Eq o => Eq (Rebase o) where
+  (==) :: Eq o => Rebase o -> Rebase o -> Bool
+  (Rebase a) == (Rebase b) = a == b
+
+instance Show o => Show (Rebase o) where
+  showsPrec :: Show o => Int -> Rebase o -> ShowS
+  showsPrec d (Rebase o) = showParen (d > 10) $
+    showString "Rebase " . showsPrec 11 o
+
+instance Rebasable o => Editable o (Rebase o) where
+    apply :: Rebasable o => Rebase o -> o -> Maybe o
+    apply (Rebase o) a = Just (a +> o)
+

@@ -2,6 +2,7 @@
 {-# LANGUAGE InstanceSigs #-}
 module Editable.List.ReplaceSegment where
 import Editable.Core (Editable (apply), Invertable (invert), Rebasable ((+>)))
+import Data.List (intersperse)
 
 data Eq a => ReplaceSegment a = ReplaceSegment
     { index :: Int
@@ -10,8 +11,13 @@ data Eq a => ReplaceSegment a = ReplaceSegment
     } deriving Eq
 
 instance (Show a, Eq a) => Show (ReplaceSegment a) where
-  show :: Show a => ReplaceSegment a -> String
-  show (ReplaceSegment i s t) = "ReplaceSegment " <> show i <> " " <> show s <> " " <> show t
+    showsPrec :: (Show a, Eq a) => Int -> ReplaceSegment a -> ShowS
+    showsPrec d (ReplaceSegment i s t) = showParen (d > 10) $
+        foldl1 (.) $ intersperse (showChar ' ')
+            [ showString "ReplaceSegment"
+            , showsPrec 11 i
+            , showsPrec 11 s
+            , showsPrec 11 t ]
 
 instance Eq a => Editable [a] (ReplaceSegment a) where
     apply :: Eq a => ReplaceSegment a -> [a] -> Maybe [a]

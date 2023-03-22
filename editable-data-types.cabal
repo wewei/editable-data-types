@@ -48,7 +48,7 @@ executable Main
 
 test-suite test-ReplaceSegment
     type:             exitcode-stdio-1.0
-    main-is:          test-ReplaceSegment.hs
+    main-is:          test-Replace.hs
     build-depends:    base ^>=4.16.4.0
                       , hspec
                       , random
@@ -58,4 +58,4 @@ test-suite test-ReplaceSegment
     other-modules:    Editable
                       , Editable.Core
                       , Editable.Properties
-                      , Editable.List.ReplaceSegment
+                      , Editable.List.Replace

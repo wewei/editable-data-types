@@ -3,12 +3,11 @@
 module Editable.List.Replace where
 import Editable.Core (Editable (apply), Invertable (invert), Rebasable ((+>), rebase))
 import Data.List (intersperse)
+import Editable.List.Util (splice)
 
-data Eq a => Replace a = Replace
-    { index :: Int
-    , source :: [a]
-    , target :: [a]
-    } | NoChange deriving Eq
+data Replace a
+    = Replace Int [a] [a]
+    | NoChange deriving Eq
 
 normalize :: Eq a => Replace a -> Replace a
 normalize NoChange          = NoChange
@@ -26,8 +25,8 @@ normalize (Replace i s@(x:xs) t@(y:ys))
             | otherwise = (reverse s, reverse t)
         
 
-instance (Show a, Eq a) => Show (Replace a) where
-    showsPrec :: (Show a, Eq a) => Int -> Replace a -> ShowS
+instance (Show a) => Show (Replace a) where
+    showsPrec :: (Show a) => Int -> Replace a -> ShowS
     showsPrec d (Replace i s t) = showParen (d > 10) $
         foldl1 (.) $ intersperse (showChar ' ')
             [ showString "Replace"
@@ -44,17 +43,10 @@ instance Eq a => Editable [a] (Replace a) where
             (prefix, ys) = splitAt i xs
             (ws, suffix) = splitAt (length s) ys
             in if ws == s
-                then Just $ prefix <> t <> suffix
+                then Just $ prefix <> (t <> suffix)
                 else Nothing
         | otherwise               = Nothing
     apply NoChange xs             = Just xs
-
-splice :: Int -> Int -> [a] -> [a] -> [a]
-splice i l xs ys = let
-    (prefix, zs) = splitAt i ys
-    (ws, suffix) = splitAt l zs
-    in prefix <> xs <> suffix
-
 
 instance Eq a => Invertable (Replace a) where
     invert :: Eq a => Replace a -> Replace a

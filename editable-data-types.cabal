@@ -46,9 +46,9 @@ executable Main
     build-depends:    base ^>=4.16.4.0
     default-language: Haskell2010
 
-test-suite test-ReplaceSegment
+test-suite UnitTest
     type:             exitcode-stdio-1.0
-    main-is:          test-Replace.hs
+    main-is:          TestMain.hs
     build-depends:    base ^>=4.16.4.0
                       , hspec
                       , random
@@ -59,3 +59,4 @@ test-suite test-ReplaceSegment
                       , Editable.Core
                       , Editable.Properties
                       , Editable.List.Replace
+                      , Editable.List.TestReplace

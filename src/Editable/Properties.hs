@@ -54,18 +54,6 @@ instance (Eq d, Show d, Show o, Rebasable o, Editable d o) => Debuggable (CP1Cas
         printf "\n"
         return (d1 == d2)
 
-fuzzCP1 :: (Eq d, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO Bool
-fuzzCP1 genDoc genOp = do
-    d  <- genDoc
-    o1 <- genOp d
-    o2 <- genOp d
-    let c = CP1Case d o1 o2
-        r = test c
-    unless r $ do
-        putStrLn "Failed case:"
-        print c
-    return r
-
 data (Eq o, Rebasable o) => CP2Case o = CP2Case o o o
 
 instance (Eq o, Rebasable o, Show o) => Show (CP2Case o) where
@@ -81,15 +69,31 @@ instance (Eq o, Rebasable o, Show o) => Debuggable (CP2Case o) where
     debug :: (Eq o, Rebasable o, Show o) => CP2Case o -> IO Bool
     debug (CP2Case o o1 o2) = debug (CP1Case o (Rebase o1) (Rebase o2))
 
-fuzzCP2 :: (Eq d, Eq o, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO Bool
-fuzzCP2 genDoc genOp = do
+generateCP1Case :: (Eq d, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO (CP1Case o d)
+generateCP1Case genDoc genOp = do
+    d  <- genDoc
+    o1 <- genOp d
+    o2 <- genOp d
+    return $ CP1Case d o1 o2
+
+generateCP2Case :: (Eq d, Eq o, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO (CP2Case o)
+generateCP2Case genDoc genOp = do
     d  <- genDoc
     o  <- genOp d
     o1 <- genOp d
     o2 <- genOp d
-    let c = CP2Case o o1 o2
-        r = test c
+    return $ CP2Case o o1 o2
+
+testAndLog :: (Testable t, Show t) => t -> IO Bool
+testAndLog c = do
+    let r = test c
     unless r $ do
         putStrLn "Failed case:"
         print c
     return r
+
+fuzzCP1 :: (Eq d, Eq o, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO Bool
+fuzzCP1 genDoc genOp = generateCP1Case genDoc genOp >>= testAndLog
+
+fuzzCP2 :: (Eq d, Eq o, Show d, Show o, Editable d o, Rebasable o) => IO d -> (d -> IO o) -> IO Bool
+fuzzCP2 genDoc genOp = generateCP2Case genDoc genOp >>= testAndLog

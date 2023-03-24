@@ -34,29 +34,22 @@ library
     hs-source-dirs:   src
     default-language: Haskell2010
 
-executable Main
-    main-is:          Main.hs
-
-    -- Modules included in this library but not exported.
-    -- other-modules:
-
-    -- LANGUAGE extensions used by modules in this package.
-    other-extensions: MultiParamTypeClasses
-    hs-source-dirs:   src
-    build-depends:    base ^>=4.16.4.0
-    default-language: Haskell2010
-
 test-suite UnitTest
     type:             exitcode-stdio-1.0
-    main-is:          TestMain.hs
+    main-is:          Main.hs
     build-depends:    base ^>=4.16.4.0
                       , hspec
                       , random
                       , mtl
     default-language: Haskell2010
-    hs-source-dirs:   test src
+    hs-source-dirs:   test, src
     other-modules:    Editable
                       , Editable.Core
                       , Editable.Properties
+                      , Editable.List.Util
                       , Editable.List.Replace
-                      , Editable.List.TestReplace
+                      , Editable.List.InsDel
+                      , Test.Util
+                      , Test.Editable.List.Replace
+                      , Test.Editable.List.InsDel
+                      , Test.Editable.List.Util

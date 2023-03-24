@@ -42,19 +42,19 @@ instance Eq a => Editable [a] (InsDel a) where
     apply NoChange xs   = Just xs
     apply (Insert n xs) ys
         | n < 0         = Nothing
-        | n < length ys = let
+        | n > length ys = Nothing
+        | otherwise     = let
             (zs, ws) = splitAt n ys
             in Just $ zs <> (xs <> ws)
-        | otherwise     = Nothing
     apply (Delete n xs) ys
         | n < 0         = Nothing
-        | n < length ys = let
+        | n > length ys = Nothing
+        | otherwise     = let
             (zs, ws) = splitAt n ys
             (us, vs) = splitAt (length xs) ws
             in if us == xs
                 then Just $ zs <> vs
                 else Nothing
-        | otherwise     = Nothing
 
 instance Ord a => Rebasable (InsDel a) where
     rebase :: Ord a => InsDel a -> InsDel a -> (InsDel a, InsDel a)

@@ -1,4 +1,4 @@
-module Editable.List.TestUtil where
+module Test.Editable.List.Util where
 import Test.Hspec (describe, it, shouldBe, SpecWith)
 import Editable.List.Util (splice)
 

@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-module Editable.List.TestReplace where
+module Test.Editable.List.Replace where
 
 import Editable.List.Replace (Replace (Replace, NoChange), normalize)
 import Test.Hspec ( hspec, describe, it, shouldBe )
@@ -13,34 +13,23 @@ import Text.Printf ( printf )
 import Control.Monad.Writer (runWriter)
 import Editable.Properties (CP1Case(CP1Case), Debuggable (debug), fuzzCP1, fuzzCP2, CP2Case (CP2Case), Testable (test), generateCP1Case)
 import Test.Hspec.Runner (SpecWith)
+import Test.Util (iterM, replM)
 
 randStr :: (Int, Int) -> IO [Char]
-randStr range = do
-    len <- randomRIO range
-    replicateM len . randomRIO $ ('a', 'z')
+randStr range = replM (randomRIO range) (randomRIO ('a', 'z'))
 
 randReplace :: [Char] -> IO (Replace Char)
 randReplace str = do
     let len = length str
     i       <- randomRIO (0, len)
     l       <- randomRIO (0, len - i)
-    let src = drop i . take l $ str
+    let src = take l . drop i $ str
     tar     <- randStr (0, 5)
     return . normalize $ Replace i src tar
 
-iterM :: Monad m => Int -> a -> (a -> m (a, b)) -> m [b]
-iterM = iterM_ (return []) where
-    iterM_ :: Monad m => m [b] -> Int -> a -> (a -> m (a, b)) -> m [b]
-    iterM_ ys 0 _ _ = reverse <$> ys
-    iterM_ ys n x f = do
-        (x', y) <- f x
-        ys'     <- ys
-        iterM_ (return (y:ys')) (n - 1) x' f
-
 randReplaces :: (Int, Int) -> [Char] -> IO [Replace Char]
 randReplaces range str = do
-    len <- randomRIO range
-    iterM len (Just str) $ \case
+    iterM (randomRIO range) (Just str) $ \case
         Nothing -> return (Nothing, NoChange)
         Just s  -> do
             r <- randReplace s
@@ -67,7 +56,8 @@ testSuite = describe "Replace" $ do
         -- forM_ [ ] $ debug >=> (`shouldBe` True)
 
     it "should pass the CP1 fuzz test" $ do
-        replicateM_ 500 $ fuzzCP1 (randStr (0, 8)) randReplace >>= (`shouldBe` True)
+        replicateM_ 500 $
+            fuzzCP1 (randStr (0, 8)) randReplace >>= (`shouldBe` True)
 
     it "should pass the batch CP1 fuzz test" $ do
         replicateM_ 500 $ fuzzCP1 (randStr (0, 8)) (randReplaces (2, 5)) >>= (`shouldBe` True)

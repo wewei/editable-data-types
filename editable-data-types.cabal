@@ -46,10 +46,12 @@ test-suite UnitTest
     other-modules:    Editable
                       , Editable.Core
                       , Editable.Properties
-                      , Editable.List.Util
+                      , Editable.Scalar.Replace
                       , Editable.List.Replace
                       , Editable.List.InsDel
+                      , Editable.List.Util
                       , Test.Util
+                      , Test.Editable.Scalar.Replace
                       , Test.Editable.List.Replace
                       , Test.Editable.List.InsDel
                       , Test.Editable.List.Util

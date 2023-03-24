@@ -3,7 +3,7 @@
 module Editable.List.InsDel where
 
 import Editable.Core ( Invertable(invert), Editable (apply), Rebasable (rebase) )
-import Numeric (showInt)
+import Numeric (showInt, showSigned)
 import Data.List (intersperse)
 import Editable.List.Util (splice)
 
@@ -23,17 +23,24 @@ instance Invertable (InsDel a) where
     invert (Delete n xs) = Insert n xs
     invert NoChange      = NoChange
 
+instance Eq a => Eq (InsDel a) where
+    (==) :: Eq a => InsDel a -> InsDel a -> Bool
+    NoChange == NoChange           = True
+    Insert n1 xs1 == Insert n2 xs2 = n1 == n2 && xs1 == xs2
+    Delete n1 xs1 == Delete n2 xs2 = n1 == n2 && xs1 == xs2
+    o1 == o2                       = False
+
 instance Show a => Show (InsDel a) where
     showsPrec :: Show a => Int -> InsDel a -> ShowS
     showsPrec d (Insert n xs) = showParen (d > 10) $
         foldl1 (.) $ intersperse (showChar ' ')
             [ showString "Insert"
-            , showInt n
+            , showSigned showInt 11 n
             , showsPrec 11 xs]
     showsPrec d (Delete n xs) = showParen (d > 10) $
         foldl1 (.) $ intersperse (showChar ' ')
             [ showString "Delete"
-            , showInt n
+            , showSigned showInt 11 n
             , showsPrec 11 xs]
     showsPrec _ NoChange = showString "NoChange"
 

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 module Test.Editable.List.Replace where
 
 import Editable.List.Replace (Replace (Replace, NoChange), normalize)
@@ -13,10 +12,13 @@ import Text.Printf ( printf )
 import Control.Monad.Writer (runWriter)
 import Editable.Properties (CP1Case(CP1Case), Debuggable (debug), fuzzCP1, fuzzCP2, CP2Case (CP2Case), Testable (test), generateCP1Case)
 import Test.Hspec.Runner (SpecWith)
-import Test.Util (iterM, replM)
+import Test.Util (replM, generateOps)
 
-randStr :: (Int, Int) -> IO [Char]
+randStr :: (Int, Int) -> IO String
 randStr range = replM (randomRIO range) (randomRIO ('a', 'z'))
+
+randDoc :: IO String
+randDoc = randStr (0, 8)
 
 randReplace :: [Char] -> IO (Replace Char)
 randReplace str = do
@@ -26,14 +28,6 @@ randReplace str = do
     let src = take l . drop i $ str
     tar     <- randStr (0, 5)
     return . normalize $ Replace i src tar
-
-randReplaces :: (Int, Int) -> [Char] -> IO [Replace Char]
-randReplaces range str = do
-    iterM (randomRIO range) (Just str) $ \case
-        Nothing -> return (Nothing, NoChange)
-        Just s  -> do
-            r <- randReplace s
-            return (apply r s, r)
 
 testSuite :: SpecWith ()
 testSuite = describe "Replace" $ do
@@ -57,11 +51,12 @@ testSuite = describe "Replace" $ do
 
     it "should pass the CP1 fuzz test" $ do
         replicateM_ 500 $
-            fuzzCP1 (randStr (0, 8)) randReplace >>= (`shouldBe` True)
+            fuzzCP1 randDoc randReplace >>= (`shouldBe` True)
 
     it "should pass the batch CP1 fuzz test" $ do
-        replicateM_ 500 $ fuzzCP1 (randStr (0, 8)) (randReplaces (2, 5)) >>= (`shouldBe` True)
-        generateCP1Case (randStr (0, 8)) (randReplaces (2, 5)) >>= debug >>= (`shouldBe` True)
+        replicateM_ 500 $
+            fuzzCP1 randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= (`shouldBe` True)
+        generateCP1Case randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= debug >>= (`shouldBe` True)
 
     -- it "should confirm to CP2" $ do
     --     forM_
@@ -75,4 +70,4 @@ testSuite = describe "Replace" $ do
     --     forM_ [ CP2Case (Replace 0 "f" "t") (Replace 0 "f" "qg") (Replace 1 "" "mv") ] $ debug >=> (`shouldBe` True)
 
     -- it "should pass the CP2 fuzz test" $ do
-    --     replicateM_ 500 $ fuzzCP2 (randStr (0, 88)) randRS >>= (`shouldBe` True)
+    --     replicateM_ 500 $ fuzzCP2 randDoc randRS >>= (`shouldBe` True)

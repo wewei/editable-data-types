@@ -3,7 +3,7 @@ import Test.Hspec (SpecWith, describe, it, shouldBe)
 import Editable.List.InsDel (InsDel(..))
 import Editable.Core ( (~), Invertable (invert) )
 import Control.Monad (replicateM_)
-import Editable.Properties (fuzzCP1, generateCP1Case, Debuggable (debug), generateCP2Case, fuzzCP2)
+import Editable.Properties (fuzzCP1, generateCP1Case, Debuggable (debug), generateCP2Case, fuzzCP2, CP2Case (CP2Case), CP1Case (CP1Case))
 import Test.Util (replM, generateOps)
 import System.Random (randomRIO)
 
@@ -62,17 +62,19 @@ testSuite =
                 invert (NoChange::InsDel Char) `shouldBe` NoChange
         describe "as Rebasable" $ do
             it "should pass the CP1 fuzz test" $ do
-                replicateM_ 500 $
+                replicateM_ 5000 $
                     fuzzCP1 randDoc randInsDel >>= (`shouldBe` True)
-                generateCP1Case randDoc randInsDel >>= debug >>= (`shouldBe` True)
             it "should pass the batch CP1 fuzz test" $ do
-                replicateM_ 500 $
+                debug ( CP1Case "g" [Insert 0 "j", Delete 1 "g"] [Insert 0 "j"])
+                    >>= (`shouldBe` True)
+                replicateM_ 5000 $
                     fuzzCP1 randDoc (generateOps (randomRIO (1, 5)) randInsDel) >>= (`shouldBe` True)
             it "should pass the CP2 fuzz test" $ do
-                replicateM_ 500 $
+                replicateM_ 5000 $
                     fuzzCP2 randDoc randInsDel >>= (`shouldBe` True)
-                generateCP2Case randDoc randInsDel >>= debug >>= (`shouldBe` True)
             it "should pass the batch CP2 fuzz test" $ do
-                replicateM_ 500 $
+                debug ( CP2Case [Delete 0 "g"] [Insert 0 "j", Delete 1 "g"] [Insert 0 "j"])
+                    >>= (`shouldBe` True)
+                replicateM_ 5000 $
                     fuzzCP2 randDoc (generateOps (randomRIO (1, 5)) randInsDel) >>= (`shouldBe` True)
             

@@ -50,13 +50,12 @@ testSuite = describe "Replace" $ do
         -- forM_ [ ] $ debug >=> (`shouldBe` True)
 
     it "should pass the CP1 fuzz test" $ do
-        replicateM_ 500 $
+        replicateM_ 5000 $
             fuzzCP1 randDoc randReplace >>= (`shouldBe` True)
 
     it "should pass the batch CP1 fuzz test" $ do
-        replicateM_ 500 $
+        replicateM_ 5000 $
             fuzzCP1 randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= (`shouldBe` True)
-        generateCP1Case randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= debug >>= (`shouldBe` True)
 
     -- it "should confirm to CP2" $ do
     --     forM_

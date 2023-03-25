@@ -1,5 +1,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Editable.List.Replace where
 import Editable.Core (Editable (apply), Invertable (invert), Rebasable ((+>), rebase))
 import Data.List (intersperse)
@@ -7,7 +8,7 @@ import Editable.List.Util (splice)
 
 data Replace a
     = Replace Int [a] [a]
-    | NoChange deriving Eq
+    | NoChange
 
 normalize :: Eq a => Replace a -> Replace a
 normalize NoChange          = NoChange
@@ -24,17 +25,9 @@ normalize (Replace i s@(x:xs) t@(y:ys))
             | x == y    = rtrim xs ys
             | otherwise = (reverse s, reverse t)
         
+deriving instance (Eq a) => Eq (Replace a)
 
-instance (Show a) => Show (Replace a) where
-    showsPrec :: (Show a) => Int -> Replace a -> ShowS
-    showsPrec d (Replace i s t) = showParen (d > 10) $
-        foldl1 (.) $ intersperse (showChar ' ')
-            [ showString "Replace"
-            , showsPrec 11 i
-            , showsPrec 11 s
-            , showsPrec 11 t ]
-
-    showsPrec d NoChange        = showParen (d > 10) $ showString "NoChange"
+deriving instance (Show a) => Show (Replace a)
 
 instance Eq a => Editable [a] (Replace a) where
     apply :: Eq a => Replace a -> [a] -> Maybe [a]

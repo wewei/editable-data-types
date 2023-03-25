@@ -80,10 +80,14 @@ testSuite =
             it "should pass the batch CP1 fuzz test" $ do
                 replicateM_ 500 $
                     fuzzCP1 randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= (`shouldBe` True)
+                replicateM_ 100 $
+                    fuzzCP1 randDoc (generateOps (randomRIO (30, 50)) randReplace) >>= (`shouldBe` True)
             it "should pass the CP2 fuzz test" $ do
                 replicateM_ 500 $
                     fuzzCP2 randDoc randReplace >>= (`shouldBe` True)
             it "should pass the batch CP2 fuzz test" $ do
                 replicateM_ 500 $
                     fuzzCP2 randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= (`shouldBe` True)
+                replicateM_ 100 $
+                    fuzzCP2 randDoc (generateOps (randomRIO (30, 50)) randReplace) >>= (`shouldBe` True)
 

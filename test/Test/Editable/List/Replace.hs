@@ -56,3 +56,5 @@ testSuite = describe "Replace" $ do
     it "should pass the batch CP1 fuzz test" $ do
         replicateM_ 5000 $
             fuzzCP1 randDoc (generateOps (randomRIO (2, 5)) randReplace) >>= (`shouldBe` True)
+        replicateM_ 100 $
+            fuzzCP1 randDoc (generateOps (randomRIO (30, 50)) randReplace) >>= (`shouldBe` True)

@@ -68,7 +68,9 @@ testSuite =
                 debug ( CP1Case "g" [Insert 0 "j", Delete 1 "g"] [Insert 0 "j"])
                     >>= (`shouldBe` True)
                 replicateM_ 5000 $
-                    fuzzCP1 randDoc (generateOps (randomRIO (1, 5)) randInsDel) >>= (`shouldBe` True)
+                    fuzzCP1 randDoc (generateOps (randomRIO (2, 5)) randInsDel) >>= (`shouldBe` True)
+                replicateM_ 100 $
+                    fuzzCP1 randDoc (generateOps (randomRIO (30, 50)) randInsDel) >>= (`shouldBe` True)
             it "should pass the CP2 fuzz test" $ do
                 replicateM_ 5000 $
                     fuzzCP2 randDoc randInsDel >>= (`shouldBe` True)
@@ -76,5 +78,7 @@ testSuite =
                 debug ( CP2Case [Delete 0 "g"] [Insert 0 "j", Delete 1 "g"] [Insert 0 "j"])
                     >>= (`shouldBe` True)
                 replicateM_ 5000 $
-                    fuzzCP2 randDoc (generateOps (randomRIO (1, 5)) randInsDel) >>= (`shouldBe` True)
+                    fuzzCP2 randDoc (generateOps (randomRIO (2, 5)) randInsDel) >>= (`shouldBe` True)
+                replicateM_ 100 $
+                    fuzzCP2 randDoc (generateOps (randomRIO (30, 50)) randInsDel) >>= (`shouldBe` True)
             

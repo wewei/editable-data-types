@@ -1,11 +1,13 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Editable.Properties where
 import Editable.Core ( Editable((~)), Rebasable (rebase, (+>)), Rebase (Rebase))
 import Control.Monad ( foldM, forM_, unless )
 import Control.Monad.Writer.Lazy ( Writer, MonadWriter (tell) )
 import Text.Printf (printf)
 import Data.List (intersperse)
+import Data.Maybe (fromMaybe)
 
 class Testable t where
     test :: t -> Bool
@@ -15,51 +17,43 @@ class Testable t => Debuggable t where
     debug = return . test 
 
 -- Testing CP1
-data (Eq d, Rebasable o, Editable d o) => CP1Case o d = CP1Case d o o
+data CP1Case o d = CP1Case d o o
 
-instance (Eq d, Show d, Show o, Rebasable o, Editable d o) => Show (CP1Case o d) where
-    showsPrec :: (Eq d, Show d, Show o, Rebasable o, Editable d o) => Int -> CP1Case o d -> ShowS
-    showsPrec d (CP1Case o o1 o2) = showParen (d > 10) $
-        foldl1 (.) $ intersperse (showChar ' ')
-            [ showString "CP1Case"
-            , showsPrec 11 o
-            , showsPrec 11 o1
-            , showsPrec 11 o2 ]
+deriving instance (Show d, Show o) => Show (CP1Case o d)
 
 instance (Eq d, Rebasable o, Editable d o) => Testable (CP1Case o d) where
     test :: (Eq d, Rebasable o, Editable d o) => CP1Case o d -> Bool
-    test (CP1Case b o1 o2) = Just b ~ o1 ~ o2' == Just b ~ o2 ~ o1' where
-        (o1', o2') = rebase o1 o2
+    test (CP1Case b o1 o2) = fromMaybe False $ do
+        (o1', o2') <- rebase o1 o2
+        return (Just b ~ o1 ~ o2' == Just b ~ o2 ~ o1')
 
 instance (Eq d, Show d, Show o, Rebasable o, Editable d o) => Debuggable (CP1Case o d) where
      debug :: (Eq d, Show d, Show o, Rebasable o, Editable d o) => CP1Case o d -> IO Bool
-     debug (CP1Case b o1 o2) = do
-        let (o1', o2') = rebase o1 o2
-            m1         = Just b ~ o1
-            d1         = m1 ~ o2'
-            m2         = Just b ~ o2
-            d2         = m2 ~ o1'
-        printf "Base:\n"
-        printf "    %s\n" $ show b
-        printf "Path 1:\n"
-        printf "  ~ %s\n" $ show o1
-        printf " -> %s\n" $ show m1
-        printf "  ~ %s\n" $ show o2'
-        printf " -> %s\n" $ show d1
-        printf "Path 2:\n"
-        printf "  ~ %s\n" $ show o2
-        printf " -> %s\n" $ show m2
-        printf "  ~ %s\n" $ show o1'
-        printf " -> %s\n" $ show d2
-        printf "\n"
-        return (d1 == d2)
+     debug (CP1Case b o1 o2) = fromMaybe (return False) $ do
+        (o1', o2') <- rebase o1 o2
+        return $ do
+            let m1         = Just b ~ o1
+                d1         = m1 ~ o2'
+                m2         = Just b ~ o2
+                d2         = m2 ~ o1'
+            printf "Base:\n"
+            printf "    %s\n" $ show b
+            printf "Path 1:\n"
+            printf "  ~ %s\n" $ show o1
+            printf " -> %s\n" $ show m1
+            printf "  ~ %s\n" $ show o2'
+            printf " -> %s\n" $ show d1
+            printf "Path 2:\n"
+            printf "  ~ %s\n" $ show o2
+            printf " -> %s\n" $ show m2
+            printf "  ~ %s\n" $ show o1'
+            printf " -> %s\n" $ show d2
+            printf "\n"
+            return (d1 == d2)
 
-data (Eq o, Rebasable o) => CP2Case o = CP2Case o o o
+data CP2Case o = CP2Case o o o
 
-instance (Eq o, Rebasable o, Show o) => Show (CP2Case o) where
-    showsPrec :: (Eq o, Rebasable o, Show o) => Int -> CP2Case o -> ShowS
-    showsPrec d (CP2Case o o1 o2) = showParen (d > 10) $
-        foldl1 (.) $ intersperse (showChar ' ') [showString "CP2Case", showsPrec 11 o, showsPrec 11 o1, showsPrec 11 o2]
+deriving instance Show o => Show (CP2Case o)
 
 instance (Eq o, Rebasable o) => Testable (CP2Case o) where
     test :: (Eq o, Rebasable o) => CP2Case o -> Bool

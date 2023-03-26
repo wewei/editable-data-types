@@ -29,10 +29,11 @@ instance Invertable (Replace a) where
     invert NoChange      = NoChange
 
 instance Ord a => Rebasable (Replace a) where
-    rebase :: Ord a => Replace a -> Replace a -> (Replace a, Replace a)
-    rebase NoChange o = (NoChange, o)
-    rebase o NoChange = (o, NoChange)
+    rebase :: Ord a => Replace a -> Replace a -> Maybe (Replace a, Replace a)
+    rebase NoChange o = Just (NoChange, o)
+    rebase o NoChange = Just (o, NoChange)
     rebase (Replace f1 t1) (Replace f2 t2)
-        | t1 < t2   = (NoChange, Replace t1 t2)
-        | t1 > t2   = (Replace t2 t1, NoChange)
-        | otherwise = (NoChange, NoChange)
+        | f1 /= f2  = Nothing
+        | t1 < t2   = Just (NoChange, Replace t1 t2)
+        | t1 > t2   = Just (Replace t2 t1, NoChange)
+        | otherwise = Just (NoChange, NoChange)

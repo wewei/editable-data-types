@@ -48,8 +48,8 @@ instance Eq a => Editable [a] (InsDel a) where
                 else Nothing
 
 instance Ord a => Rebasable (InsDel a) where
-    rebase :: Ord a => InsDel a -> InsDel a -> (InsDel a, InsDel a)
-    rebase o1 o2 = (normalize o1', normalize o2') where
+    rebase :: Ord a => InsDel a -> InsDel a -> Maybe (InsDel a, InsDel a)
+    rebase o1 o2 = Just (normalize o1', normalize o2') where
         (o1', o2') = rebase_ o1 o2
         rebase_ NoChange o = (NoChange, o)
         rebase_ o NoChange = (o, NoChange)

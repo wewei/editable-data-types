@@ -47,8 +47,8 @@ instance Eq a => Invertable (Replace a) where
     invert NoChange        = NoChange
 
 instance Ord a => Rebasable (Replace a) where
-    rebase :: Ord a => Replace a -> Replace a -> (Replace a, Replace a)
-    rebase o1 o2 = (normalize o1', normalize o2') where
+    rebase :: Ord a => Replace a -> Replace a -> Maybe (Replace a, Replace a)
+    rebase o1 o2 = Just (normalize o1', normalize o2') where
         (o1', o2')         = rebase_ (normalize o1) (normalize o2)
         rebase_ NoChange o = (NoChange, o)
         rebase_ o NoChange = (o, NoChange)

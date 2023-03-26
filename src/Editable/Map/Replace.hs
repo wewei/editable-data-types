@@ -31,15 +31,17 @@ instance (Ord k, Eq v) => Editable (Map k v) (Replace k v) where
         | otherwise       = Nothing
 
 instance (Eq k, Ord v) => Rebasable (Replace k v) where
-    rebase :: Ord v => Replace k v -> Replace k v -> (Replace k v, Replace k v)
-    rebase NoChange o = (NoChange, o)
-    rebase o NoChange = (o, NoChange)
+    rebase :: Ord v => Replace k v -> Replace k v -> Maybe (Replace k v, Replace k v)
+    rebase NoChange o = Just (NoChange, o)
+    rebase o NoChange = Just (o, NoChange)
     rebase o1@(Replace k1 f1 t1) o2@(Replace k2 f2 t2)
         | k1 == k2  =
-            if t1 > t2 then
-                (Replace k1 t2 t1, NoChange)
+            if f1 /= f2 then
+                Nothing
+            else if t1 > t2 then
+                Just (Replace k1 t2 t1, NoChange)
             else if t1 < t2 then
-                (NoChange, Replace k2 t1 t2)
+                Just (NoChange, Replace k2 t1 t2)
             else
-                (NoChange, NoChange)
-        | otherwise = (o1, o2)
+                Just (NoChange, NoChange)
+        | otherwise = Just (o1, o2)

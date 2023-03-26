@@ -4,6 +4,8 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Editable.Core where
 import Data.Functor.Classes (Eq1 (liftEq), Show1 (liftShowsPrec))
@@ -42,13 +44,17 @@ instance (Invertable o1, Invertable o2) => Invertable (Either o1 o2) where
     invert (Right o) = Right (invert o)
 
 class Rebasable o where
-    rebase  :: o -> o -> (o, o)
-    rebase o1 o2 = (o1 +> o2, o2 +> o1)
+    -- We need to allow the rebase to fail.
+    -- It's possible to receive operations from an unreliable endpoint, we need to protect the data
+    -- structure from being corrupted by illegal operations.
+    rebase  :: o -> o -> Maybe (o, o)
 
-    (+>) :: o -> o -> o
-    (+>) = (fst .) . rebase
+    (+>) :: Maybe o -> o -> Maybe o
+    mo1 +> o2 = do
+        o1  <- mo1
+        fst <$> rebase o1 o2
 
-    (<+) :: o -> o -> o
+    (<+) :: o -> Maybe o -> Maybe o
     (<+) = flip (+>)
 
 {-
@@ -68,50 +74,43 @@ ys |            ys2 |            ys4 |
             x               xs
 -}
 
-batchRebase :: (o -> o -> ([o], [o])) -> [o] -> [o] -> ([o], [o])
+batchRebase :: (o -> o -> Maybe ([o], [o])) -> [o] -> [o] -> Maybe ([o], [o])
 batchRebase weakRebase = rebase where
-    rebase [] xs = ([], xs)
-    rebase xs [] = (xs, [])
-    rebase (x:xs) (y:ys) = let
-        (xs1, ys1) = weakRebase x y
+    rebase [] xs = Just ([], xs)
+    rebase xs [] = Just (xs, [])
+    rebase (x:xs) (y:ys) = do
+        (xs1, ys1) <- weakRebase x y
         -- x <> ys1 == y <> xs1
-        (xs2, ys3) = rebase xs ys1
+        (xs2, ys3) <- rebase xs ys1
         -- xs <> ys3 == ys1 <> xs2
         --    x <> xs <> ys3
         -- == x <> ys1 <> xs2
         -- == y <> xs1 <> xs2
-        (xs3, ys2) = rebase xs1 ys
+        (xs3, ys2) <- rebase xs1 ys
         -- xs1 <> ys2 == ys <> xs3
-        (xs4, ys4) = rebase xs2 ys2
+        (xs4, ys4) <- rebase xs2 ys2
         -- xs2 <> ys4 == ys2 <> xs4
         --    x <> xs <> ys3 <> ys4
         -- == y <> xs1 <> xs2 <> ys4
         -- == y <> xs1 <> ys2 <> xs4
         -- == y <> ys <> xs3 <> xs4
-        in (xs3 ++ xs4, ys3 ++ ys4)
+        return (xs3 ++ xs4, ys3 ++ ys4)
 
 instance Rebasable o => Rebasable [o] where
-    rebase :: Rebasable o => [o] -> [o] -> ([o], [o])
-    rebase = batchRebase $ \x y -> let
-        (x', y') = rebase x y
-        in ([x'], [y'])
+    rebase :: Rebasable o => [o] -> [o] -> Maybe ([o], [o])
+    rebase = batchRebase $ \x y -> do
+        (x', y') <- rebase x y
+        return ([x'], [y'])
 
 newtype Rebase o = Rebase o;
 
-instance Rebasable o => Rebasable (Rebase o) where
-    (+>) :: Rebasable o => Rebase o -> Rebase o -> Rebase o
-    (Rebase o1) +> (Rebase o2) = Rebase (o1 +> o2)
+deriving instance Rebasable o => Rebasable (Rebase o)
 
-instance Eq o => Eq (Rebase o) where
-  (==) :: Eq o => Rebase o -> Rebase o -> Bool
-  (Rebase a) == (Rebase b) = a == b
+deriving instance Eq o => Eq (Rebase o)
 
-instance Show o => Show (Rebase o) where
-  showsPrec :: Show o => Int -> Rebase o -> ShowS
-  showsPrec d (Rebase o) = showParen (d > 10) $
-    showString "Rebase " . showsPrec 11 o
+deriving instance Show o => Show (Rebase o)
 
 instance Rebasable o => Editable o (Rebase o) where
-    apply :: Rebasable o => Rebase o -> o -> Maybe o
-    apply (Rebase o) a = Just (a +> o)
+    (~) :: Rebasable o => Maybe o -> Rebase o -> Maybe o
+    o1 ~ (Rebase o2) = o1 +> o2
 

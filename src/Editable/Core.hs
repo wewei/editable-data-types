@@ -41,16 +41,6 @@ instance (Invertable o1, Invertable o2) => Invertable (Either o1 o2) where
     invert (Left o)  = Left (invert o)
     invert (Right o) = Right (invert o)
 
-class WeakRebasable o where
-    weakRebase  :: o -> o -> ([o], [o])
-    weakRebase o1 o2 = (weakRebaseL o1 o2, weakRebaseL o2 o1)
-
-    weakRebaseL :: o -> o -> [o]
-    weakRebaseL = (fst .) . weakRebase
-
-    weakRebaseR :: o -> o -> [o]
-    weakRebaseR = flip weakRebaseL
-
 class Rebasable o where
     rebase  :: o -> o -> (o, o)
     rebase o1 o2 = (o1 +> o2, o2 +> o1)
@@ -60,10 +50,6 @@ class Rebasable o where
 
     (<+) :: o -> o -> o
     (<+) = flip (+>)
-
-instance Rebasable o => WeakRebasable o where
-    weakRebase :: Rebasable o => o -> o -> ([o], [o])
-    weakRebase o1 o2 = let (o3, o4) = rebase o1 o2 in ([o3], [o4])
 
 {-
    +----------------+----------------+
@@ -81,8 +67,9 @@ ys |            ys2 |            ys4 |
    +----------------+----------------+
             x               xs
 -}
-instance WeakRebasable o => Rebasable [o] where
-    rebase :: WeakRebasable o => [o] -> [o] -> ([o], [o])
+
+batchRebase :: (o -> o -> ([o], [o])) -> [o] -> [o] -> ([o], [o])
+batchRebase weakRebase = rebase where
     rebase [] xs = ([], xs)
     rebase xs [] = (xs, [])
     rebase (x:xs) (y:ys) = let
@@ -102,6 +89,12 @@ instance WeakRebasable o => Rebasable [o] where
         -- == y <> xs1 <> ys2 <> xs4
         -- == y <> ys <> xs3 <> xs4
         in (xs3 ++ xs4, ys3 ++ ys4)
+
+instance Rebasable o => Rebasable [o] where
+    rebase :: Rebasable o => [o] -> [o] -> ([o], [o])
+    rebase = batchRebase $ \x y -> let
+        (x', y') = rebase x y
+        in ([x'], [y'])
 
 newtype Rebase o = Rebase o;
 

@@ -2,8 +2,9 @@ module Test.Editable.Tree.InsDelMov where
 import Test.Hspec (describe, it, shouldBe, SpecWith)
 import Data.Tree (unfoldTree, Tree (Node), drawTree)
 import Editable.Core ((~), Invertable (invert))
-import Editable.Tree.InsDelMov (InsDelMov(..), splitTree, adjustDeletion, TreeIx (TreeIx))
+import Editable.Tree.InsDelMov (InsDelMov(..), splitTree)
 import Data.Functor ((<&>))
+import Editable.Tree.TreeIx (TreeIx(..))
 
 printTree :: Show a => Tree a -> IO ()
 printTree t = putStrLn $ drawTree $ show <$> t

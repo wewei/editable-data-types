@@ -54,6 +54,7 @@ test-suite UnitTest
                       , Editable.List.InsDel
                       , Editable.List.Util
                       , Editable.Tree.InsDelMov
+                      , Editable.Tree.TreeIx
                       , Test.Util
                       , Test.Editable.Scalar.Replace
                       , Test.Editable.Map.Replace
@@ -61,3 +62,4 @@ test-suite UnitTest
                       , Test.Editable.List.InsDel
                       , Test.Editable.List.Util
                       , Test.Editable.Tree.InsDelMov
+                      , Test.Editable.Tree.TreeIx

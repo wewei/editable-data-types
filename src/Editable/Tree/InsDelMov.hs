@@ -7,27 +7,8 @@ module Editable.Tree.InsDelMov where
 import Data.Tree ( Tree(..), Forest )
 import Editable.Core (Invertable (invert), Editable (apply, (~)), Rebasable(rebase), batchRebase)
 import Data.Maybe (fromJust)
-
-newtype TreeIx = TreeIx [Int] deriving (Ord, Eq, Show)
-
-(~>) :: TreeIx -> TreeIx -> Bool
-(TreeIx ns) ~> (TreeIx ms) = take (length ms) ns == ms
-
-parent :: TreeIx -> TreeIx
-parent (TreeIx []) = TreeIx []
-parent (TreeIx ns) = TreeIx . reverse . drop 1 . reverse $ ns
-
-root :: TreeIx
-root = TreeIx []
-
-instance Editable (Tree a) TreeIx where
-    apply :: TreeIx -> Tree a -> Maybe (Tree a)
-    apply (TreeIx []) t = Just t
-    apply (TreeIx (n:ns)) (Node v ch)
-        | n < 0     = Nothing
-        | otherwise = case splitAt n ch of
-            (_, c:_) -> apply (TreeIx ns) c
-            _        -> Nothing
+import Data.Tuple (swap)
+import Editable.Tree.TreeIx (TreeIx (..), root, (<~), diff, sibling)
 
 data InsDelMov a
     = Insert TreeIx (Tree a)
@@ -105,33 +86,17 @@ instance Editable TreeIx (InsDelMov a) where
         | otherwise = do
             TreeIx ms' <- apply (Delete (TreeIx ns) (Node () [])) (TreeIx ms)
             return . TreeIx $ if null ms' then [] else n:ms'
+    apply (Move ixA ixB) ix@(TreeIx (m:ms))
+        | ix <~ ixA  = let
+            (_, ix', _) = diff ix ixA
+            in Just (ixB <> ixA)
+        | ixA <~ ixB = Nothing
+        | otherwise  = do
+            let del = Delete ixA (Node () [])
+            ixB' <- Just ixB ~ del
+            let ins = Insert ixB' (Node () [])
+            Just ix ~ del ~ ins
 
-
-adjustInsertion :: [Int] -> [Int] -> [Int]
-adjustInsertion [] ms = ms
-adjustInsertion _ []  = []
-adjustInsertion [n] (m:ms)
-    | n <= m    = (m + 1) : ms
-    | otherwise = m : ms
-adjustInsertion (n:ns) (m:ms)
-    | n == m    = n : adjustInsertion ns ms
-    | otherwise = m : ms
-
-adjustDeletion :: [Int] -> [Int] -> [Int]
-adjustDeletion [] ms = ms
-adjustDeletion _ []  = []
-adjustDeletion [n] (m:ms)
-    | n < m     = (m - 1) : ms
-    | n > m     = m : ms
-    | otherwise = [n]
-adjustDeletion (n:ns) (m:ms)
-    | n == m    = m : adjustDeletion ns ms
-    | otherwise = m : ms
-
-next :: [Int] -> [Int]
-next []     = []
-next [n]    = [n + 1]
-next (n:ns) = n:next ns
 
 instance Eq a => Editable (Tree a) (InsDelMov a) where
     apply :: InsDelMov a -> Tree a -> Maybe (Tree a)
@@ -146,33 +111,40 @@ instance Eq a => Editable (Tree a) (InsDelMov a) where
             (s', t) <- splitTree ns s
             joinTree ms' t s'
 
-(~=) :: [Int] -> [Int] -> Bool
-ns ~= ms = take (length ms) ns == ms
+instance Ord a => Rebasable (InsDelMov a) where
+    rebase :: Ord a => InsDelMov a -> InsDelMov a -> Maybe (InsDelMov a, InsDelMov a)
+    rebase NoChange x = Just (NoChange, x)
+    rebase o1@(Insert ns1 t1) o2@(Insert ns2 t2)
+        | ns1 /= ns2  = do
+            ns1' <- Just ns1 ~ o2
+            ns2' <- Just ns1 ~ o1
+            return (Insert ns1' t1, Insert ns2' t2)
+        | t1 < t2     = Just (o2, Insert (sibling ns2) t2)
+        | t1 > t2     = Just (Insert (sibling ns1) t1, o2)
+        | otherwise   = Just (NoChange, NoChange)
 
--- instance Ord a => Rebasable (InsDelMov a) where
---     rebase :: Ord a => InsDelMov a -> InsDelMov a -> Maybe (InsDelMov a, InsDelMov a)
---     rebase NoChange x = Just (NoChange, x)
---     rebase x NoChange = Just (x, NoChange)
---     rebase (Insert ns1 t1) (Insert ns2 t2)
---         | ns1 /= ns2  = Just
---             ( Insert (adjustInsertion ns2 ns1) t1
---             , Insert (adjustInsertion ns1 ns2) t2)
---         | t1 < t2     = Just
---             ( Insert ns1 t1
---             , Insert (next ns2) t2)
---         | t1 > t2     = Just
---             ( Insert (next ns1) t1
---             , Insert ns2 t2)
---         | otherwise   = Just (NoChange, NoChange)
---     rebase (Insert ns1 t1) (Delete ns2 t2)
---         | ns1 ~= ns2  = Just
---             ( NoChange
---             , Delete ns2 (fromJust (joinTree (drop (length ns2) ns1) t1 t2)))
---         | ns1 /= ns2  = Just
---             ( Insert (adjustDeletion ns2 ns1) t1
---             , Delete (adjustInsertion ns1 ns2) t2)
---         | otherwise   = Just
---             ( Insert ns1 t1
---             , Delete (next ns2) t2)
---     -- rebase (Insert ns1 t1) (Move ns2 ms)
---     --     | 
+    rebase o1@(Insert ns1 t1) o2@(Delete ns2 t2)
+        | ns1 == ns2  = Just (o1, Delete (sibling ns2) t2)
+        | ns1 <~ ns2  = do
+            let (_, ns1', _) = diff ns1 ns2
+            t2' <- joinTree ns1' t1 t2
+            return (NoChange, Delete ns2 t2')
+        | otherwise   = do
+            ns1' <- Just ns1 ~ o2
+            ns2' <- Just ns2 ~ o1
+            return (Insert ns1' t1, Insert ns2' t2)
+    -- TODO
+    rebase o1@(Insert ns1 t1) o2@(Move ns2 ms2)
+        = Just (o1, o2)
+    
+    rebase o1@(Delete ns1 t1) o2@(Delete ns2 t2)
+        = Just (o1, o2)
+
+    rebase o1@(Delete ns1 t1) o2@(Move ns2 ms2)
+        = Just (o1, o2)
+    
+    rebase o1@(Move ns1 ms1) o2@(Move ns2 ms2)
+        = Just (o1, o2)
+
+    -- End TODO
+    rebase o1 o2      = swap <$> rebase o2 o1

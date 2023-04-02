@@ -7,7 +7,7 @@ import qualified Test.Editable.List.InsDel
 import qualified Test.Editable.Scalar.Replace
 import qualified Test.Editable.Map.Replace
 import qualified Test.Editable.Tree.InsDelMov
-
+import qualified Test.Editable.Tree.TreeIx
 
 main :: IO ()
 main = hspec $ do
@@ -17,3 +17,4 @@ main = hspec $ do
     Test.Editable.Scalar.Replace.testSuite
     Test.Editable.Map.Replace.testSuite
     Test.Editable.Tree.InsDelMov.testSuite
+    Test.Editable.Tree.TreeIx.testSuite

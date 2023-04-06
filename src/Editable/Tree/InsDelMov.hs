@@ -104,6 +104,7 @@ instance Eq a => Editable (Tree a) (InsDelMov a) where
     apply (Insert ns t) s = joinTree ns t s
     apply (Delete ns t) s = do
         (s', t') <- splitTree ns s
+        
         if t' == t then Just s' else Nothing
     apply (Move ns ms) s  = do
         ms' <- Just ms ~ Delete ns (Node () [])

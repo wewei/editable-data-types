@@ -65,4 +65,4 @@ test-suite UnitTest
                       , Test.Editable.List.Util
                       , Test.Editable.Tree.InsDelMov
                       , Test.Editable.Tree.TreeIx
-                      , Test.Editable.Tree.Util
+                      , Test.Editable.Tree.TreeQQ

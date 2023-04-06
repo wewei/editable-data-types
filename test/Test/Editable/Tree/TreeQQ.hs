@@ -1,4 +1,4 @@
-module Test.Editable.Tree.Util where
+module Test.Editable.Tree.TreeQQ where
 import Data.Tree (Tree (Node))
 import Text.Parsec ( parse, ParseError, char, spaces, option, runParser, Parsec, getPosition, setSourceName, setSourceColumn, setSourceLine, setPosition )
 import qualified Text.Parsec.Token as T
@@ -22,7 +22,7 @@ quoteTreeExp s = do
     let pos = ( TH.loc_filename loc
               , fst (TH.loc_start loc)
               , snd (TH.loc_start loc))
-    tr  <- parseTree' pos s
+    tr  <- parseTree pos s
     dataToExpQ (const Nothing) tr
 
 
@@ -32,15 +32,15 @@ quoteTreePat s = do
     let pos = ( TH.loc_filename loc
               , fst (TH.loc_start loc)
               , snd (TH.loc_start loc))
-    tr <- parseTree' pos s
+    tr <- parseTree pos s
     dataToPatQ (const Nothing) tr
 
 rightToMaybe :: Either a b -> Maybe b
 rightToMaybe (Right b) = Just b
 rightToMaybe _         = Nothing
 
-parseTree' :: (Monad m, MonadFail m) => (String, Int, Int) -> String -> m (Tree Int)
-parseTree' (file, line, col) s =
+parseTree :: (Monad m, MonadFail m) => (String, Int, Int) -> String -> m (Tree Int)
+parseTree (file, line, col) s =
     case runParser p () "" s of
         Left err -> fail $ show err
         Right tr -> return tr
@@ -51,31 +51,20 @@ parseTree' (file, line, col) s =
                 flip setSourceName file $
                 flip setSourceLine line $
                 setSourceColumn pos col
-            treeRules
+            pTree
+        pTree = withLeadingSpaces . withTailingSpaces . parens $ do
+            n  <- fromInteger <$> withTailingSpaces integer
+            ch <- option [] $ do
+                withTailingSpaces . char $ ','
+                commaSep1 pTree
+            return $ Node n ch
 
-treeRules :: Parsec String u (Tree Int)
-treeRules = do
-    spaces
-    t <- parens $ do
-        spaces
-        n  <- fromInteger <$> integer
-        ch <- option [] $ do
-            spaces
-            char ','
-            spaces
-            commaSep1 treeRules
-        spaces
-        return $ Node n ch
-    spaces
-    return t
-integer = T.integer L.haskell
-commaSep1 = T.commaSep1 L.haskell
-parens = T.parens L.haskell
+        withLeadingSpaces :: Parsec [Char] u a -> Parsec [Char] u a
+        withLeadingSpaces = (>>) spaces
 
-
-parseTree :: String -> Maybe (Tree Int)
-parseTree = rightToMaybe . parse treeRules "(source)"
-
-showTree :: Tree Int -> ShowS
-showTree (Node n []) = showParen True (shows n)
-showTree (Node n ch) = showParen True . foldr1 (.) . intersperse showCommaSpace $ (shows n : map showTree ch)
+        withTailingSpaces :: Parsec [Char] u a -> Parsec [Char] u a
+        withTailingSpaces p = do { t <- p; spaces; return t }
+ 
+        integer = T.integer L.haskell
+        commaSep1 = T.commaSep1 L.haskell
+        parens = T.parens L.haskell

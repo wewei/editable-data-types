@@ -8,7 +8,7 @@ import Data.Tree ( Tree(..), Forest )
 import Editable.Core (Invertable (invert), Editable (apply, (~)), Rebasable(rebase), batchRebase)
 import Data.Maybe (fromJust)
 import Data.Tuple (swap)
-import Editable.Tree.TreeIx (TreeIx (..), root, (<~), diff, sibling)
+import Editable.Tree.TreeIx (TreeIx (..), root, (<~), diff, sibling, isValid)
 
 data InsDelMov a
     = Insert TreeIx (Tree a)
@@ -74,23 +74,24 @@ instance Editable TreeIx (InsDelMov a) where
         | otherwise = do
             TreeIx ms' <- apply (Insert (TreeIx ns) t) (TreeIx ms)
             return . TreeIx $ n:ms'
-    apply (Delete (TreeIx []) _) _ = Nothing
-    apply (Delete (TreeIx [n]) _) ix@(TreeIx (m:ms))
-        | n < 0     = Nothing
-        | n > m     = Just ix
-        | n == m    = Just root
-        | otherwise = Just . TreeIx $ (m - 1) : ms
-    apply (Delete (TreeIx (n:ns)) _) ix@(TreeIx (m:ms))
-        | n < 0     = Nothing
-        | n /= m    = Just ix
-        | otherwise = do
-            TreeIx ms' <- apply (Delete (TreeIx ns) (Node () [])) (TreeIx ms)
-            return . TreeIx $ if null ms' then [] else n:ms'
+    apply (Delete ixA _) ix
+        | not (isValid ixA) = Nothing
+        | ixA == TreeIx []  = Nothing
+        | otherwise = case diff ixA ix of
+            (_, TreeIx [], _) ->
+                Just (TreeIx [])
+            (ixBase, TreeIx [y], TreeIx (z:zs)) ->
+                if y < z
+                    then Just $ ixBase <> TreeIx ((z - 1):zs)
+                    else Just ix
+            _ -> Just ix
     apply (Move ixA ixB) ix@(TreeIx (m:ms))
+        | not (isValid ixA) || not (isValid ixB)
+                     = Nothing
+        | ixB <~ ixA = Nothing
         | ix <~ ixA  = let
             (_, ix', _) = diff ix ixA
-            in Just (ixB <> ixA)
-        | ixA <~ ixB = Nothing
+            in Just (ixB <> ix')
         | otherwise  = do
             let del = Delete ixA (Node () [])
             ixB' <- Just ixB ~ del

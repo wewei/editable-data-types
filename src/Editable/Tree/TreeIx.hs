@@ -18,11 +18,14 @@ instance Monoid TreeIx where
     mempty :: TreeIx
     mempty = root
 
-(<~) :: TreeIx -> TreeIx -> Bool
-(TreeIx xs) <~ (TreeIx ys) = take (length xs) ys == xs
+isValid :: TreeIx -> Bool
+isValid (TreeIx xs) = all (>= 0) xs
 
 (~>) :: TreeIx -> TreeIx -> Bool
-(~>) = flip (<~)
+(TreeIx xs) ~> (TreeIx ys) = take (length xs) ys == xs
+
+(<~) :: TreeIx -> TreeIx -> Bool
+(<~) = flip (~>)
 
 diff :: TreeIx -> TreeIx -> (TreeIx, TreeIx, TreeIx)
 diff (TreeIx ns) (TreeIx ms) = (TreeIx bs, TreeIx ns', TreeIx ms') where

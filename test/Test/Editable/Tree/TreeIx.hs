@@ -31,5 +31,5 @@ testSuite = describe "TreeIx" $ do
                 , ([1], [], False)
                 , ([1, 2], [1, 3, 4], False)
                 ] $ \(xs, ys, result) -> do
-                    TreeIx xs <~ TreeIx ys `shouldBe` result
-                    TreeIx ys ~> TreeIx xs `shouldBe` result
+                    TreeIx xs ~> TreeIx ys `shouldBe` result
+                    TreeIx ys <~ TreeIx xs `shouldBe` result

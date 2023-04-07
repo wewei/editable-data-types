@@ -1,11 +1,11 @@
 {-# LANGUAGE QuasiQuotes #-}
 module Test.Editable.Tree.InsDelMov where
 import Test.Hspec (describe, it, shouldBe, SpecWith)
-import Data.Tree (unfoldTree, Tree (Node), drawTree)
+import Data.Tree (unfoldTree, Tree, drawTree)
 import Editable.Core ((~), Invertable (invert))
 import Editable.Tree.InsDelMov (InsDelMov(..), splitTree)
-import Data.Functor ((<&>))
-import Editable.Tree.TreeIx (TreeIx(..))
+import Data.Functor ((<&>), void)
+import Editable.Tree.TreeIx (TreeIx(..), diff)
 import Test.Editable.Tree.TreeQQ (tree)
 
 printTree :: Show a => Tree a -> IO ()
@@ -26,22 +26,64 @@ nochange = NoChange
 testSuite :: SpecWith ()
 testSuite =
     describe "InsDelMov" $ do
-        describe "as Editable" $ do
+        describe "as Editable TreeIx" $ do
+            describe "Insert" $ do
+                it "should adjust the TreeIx according to the insertion" $ do
+                    Just (TreeIx [0, 1]) ~ insert [1] [tree|(4)|] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ insert [0, 0, 1] [tree|(4)|] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ insert [0, 1] [tree|(4)|] `shouldBe` Just (TreeIx [0, 2])
+                    Just (TreeIx [0, 1]) ~ insert [0] [tree|(4)|] `shouldBe` Just (TreeIx [1, 1])
+                it "should fail if the location is illegal" $ do
+                    Just (TreeIx [0, 1]) ~ insert [] [tree|(4)|] `shouldBe` Nothing
+                    Just (TreeIx [0, 1]) ~ insert [-1] [tree|(4)|] `shouldBe` Nothing
+
+            describe "Delete" $ do
+                it "should adjust the TreeIx according to the deletion" $ do
+                    Just (TreeIx [0, 1]) ~ delete [1] [tree|(4)|] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ delete [0, 0, 1] [tree|(4)|] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ delete [0, 1, 2] [tree|(4)|] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ delete [0, 0] [tree|(4)|] `shouldBe` Just (TreeIx [0, 0])
+                    Just (TreeIx [0, 1]) ~ delete [0, 1] [tree|(4)|] `shouldBe` Just (TreeIx [])
+                    Just (TreeIx [0, 1]) ~ delete [0] [tree|(4)|] `shouldBe` Just (TreeIx [])
+                    Just (TreeIx [1, 1]) ~ delete [0] [tree|(4)|] `shouldBe` Just (TreeIx [0, 1])
+                it "should fail if the location is illegal" $ do
+                    Just (TreeIx [0, 1]) ~ delete [] [tree|(4)|] `shouldBe` Nothing
+                    Just (TreeIx [0, 1]) ~ delete [-1] [tree|(4)|] `shouldBe` Nothing
+
+            describe "Move" $ do
+                it "should adjust the TreeIx according to the moving" $ do
+                    Just (TreeIx [0, 1]) ~ move [1] [2] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ move [0, 0, 1] [0, 2] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ move [0, 0] [0, 1] `shouldBe` Just (TreeIx [0, 1])
+                    Just (TreeIx [0, 1]) ~ move [0, 0] [0, 2] `shouldBe` Just (TreeIx [0, 0])
+                    Just (TreeIx [0, 1]) ~ move [0, 2] [0, 1] `shouldBe` Just (TreeIx [0, 2])
+                    Just (TreeIx [0, 1]) ~ move [0, 2] [0] `shouldBe` Just (TreeIx [1, 1])
+                    Just (TreeIx [0, 1]) ~ move [0, 1] [0] `shouldBe` Just (TreeIx [0])
+                it "should fail if the location is illegal" $ do
+                    Just (TreeIx [0, 1]) ~ move [] [1] `shouldBe` Nothing
+                    Just (TreeIx [0, 1]) ~ move [1] [] `shouldBe` Nothing
+                    Just (TreeIx [0, 1]) ~ move [-1] [0] `shouldBe` Nothing
+                    Just (TreeIx [0, 1]) ~ move [0] [-1] `shouldBe` Nothing
+                    Just (TreeIx [0, 1]) ~ move [0] [0, 1] `shouldBe` Nothing
+
+
+
+        describe "as Editable (Tree a)" $ do
             let base = [tree|(0, (1, (2, (3)), (3)), (2, (3)), (3))|] :: Tree Int
             describe "Insert" $ do
                 it "should insert the subtree at the given location" $ do
-                    Just base ~ insert [0] (Node 4 []) `shouldBe`
+                    Just base ~ insert [0] [tree|(4)|] `shouldBe`
                         Just [tree|(0, (4), (1, (2, (3)), (3)), (2, (3)), (3))|]
-                    Just base ~ insert [0, 1] (Node 4 [Node 5 []]) `shouldBe`
+                    Just base ~ insert [0, 1] [tree|(4, (5))|] `shouldBe`
                         Just [tree|(0, (1, (2, (3)), (4, (5)), (3)), (2, (3)), (3))|]
-                    Just base ~ insert [2, 0] (Node 4 [Node 5 []]) `shouldBe`
+                    Just base ~ insert [2, 0] [tree|(4, (5))|] `shouldBe`
                         Just [tree|(0, (1, (2, (3)), (3)), (2, (3)), (3, (4, (5))))|]
                         
                 it "should fail if the location is illegal" $ do
-                    Just base ~ insert [] (Node 4 []) `shouldBe` Nothing
-                    Just base ~ insert [-1] (Node 4 []) `shouldBe` Nothing
-                    Just base ~ insert [0, 3] (Node 4 []) `shouldBe` Nothing
-                    Just base ~ insert [3, 0] (Node 4 []) `shouldBe` Nothing
+                    Just base ~ insert [] [tree|(4)|] `shouldBe` Nothing
+                    Just base ~ insert [-1] [tree|(4)|] `shouldBe` Nothing
+                    Just base ~ insert [0, 3] [tree|(4)|] `shouldBe` Nothing
+                    Just base ~ insert [3, 0] [tree|(4)|] `shouldBe` Nothing
 
             describe "Delete" $ do
                 it "should delete the subtree from the given location" $ do
